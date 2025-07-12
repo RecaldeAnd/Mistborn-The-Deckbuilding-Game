@@ -19,14 +19,14 @@ end
 -- Use Alt-Click to just spawn decks all decks and pieces and let user choose
 -- how to setup the game.
 function click_func(obj, color, alt_click)
-    local main_deck, mission_deck, character_deck = spawn_decks();
+    local main_deck, mission_deck, character_deck = spawn_decks(alt_click);
     assign_characters_and_spawn_pieces(main_deck, mission_deck, character_deck); 
 end
 
-function spawn_decks()
+function spawn_decks(is_custom_start)
     -- TODO - make sure you don't clone the main deck, character deck, and mission deck
     local main_deck = create_and_spawn_main_deck();
-    local mission_deck, character_deck = spawn_mission_and_character_decks();
+    local mission_deck, character_deck = spawn_mission_and_character_decks(is_custom_start);
     return main_deck, mission_deck, character_deck;
 end
 
@@ -61,28 +61,20 @@ function create_and_spawn_main_deck()
     return main_deck;
 end
 
-function spawn_mission_and_character_decks()
-    local donor_mission_deck_GUID   = '92874a'; -- 92874a This needs set manually everytime the deck is replaced 85c4d5 <- original mission deck guid
-    local donor_character_deck_GUID = 'de0a91'; --This needs set manually everytime the deck is replaced
+function spawn_mission_and_character_decks(is_custom_start)
+    local mission_deck   = getObjectFromGUID(get_mission_deck_GUID());
+    local character_deck = getObjectFromGUID(get_character_deck_GUID());
 
-    local donor_mission_deck   = getObjectFromGUID(donor_mission_deck_GUID);
-    local donor_character_deck = getObjectFromGUID(donor_character_deck_GUID);
-    --print("getObjectFromGUID");
-    
-    local mission_deck_position   = {-15.26, 1.50,  0.01};
-    local character_deck_position = {-21.13, 1.50,  0.05};
-    
-    --print("Set Spawn Data");
+    if is_custom_start then
+        local mission_deck_position   = {-15.26, 1.50,  0.01};
+        local character_deck_position = {-21.13, 1.50,  0.05};
 
-    local mission_deck   = donor_mission_deck  .clone();
-    mission_deck.setLock(false);
-    local character_deck = donor_character_deck.clone();
-    character_deck.setLock(false);
-    --print("Clone From Donors");
+        mission_deck  .setLock(false);
+        character_deck.setLock(false);
 
-    mission_deck  .setPosition(mission_deck_position  );
-    character_deck.setPosition(character_deck_position);
-    --print("Set Main Deck Position");
+        mission_deck  .setPosition(mission_deck_position  );
+        character_deck.setPosition(character_deck_position);
+    end
 
     shuffle_deck(mission_deck);
     shuffle_deck(character_deck);
@@ -117,6 +109,7 @@ function assign_characters_and_spawn_pieces(main_deck, mission_deck, character_d
     end
 
     -- Wait for 1 second for cards to settle before locking them in place
+    -- Comment this out to see if its necessary with new deck acquiring algo
     Wait.time(function() lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array) end, 1);
 end
 
@@ -163,6 +156,7 @@ function assign_and_set_character_cards(character_deck, players)
             current_player.changeColor(character_color);
         end
         
+        -- Map the character names to the character cards
         assigned_character_cards[character_name] = character_card;
     end
 
@@ -350,6 +344,16 @@ function shuffle_deck(deck)
     deck.randomize();
 end
 -- ************************** DATA TABLES ************************* --
+-- These need set manually everytime the deck or object is replaced
+
+function get_character_deck_GUID()
+    return 'de0a91';
+end
+
+function get_mission_deck_GUID()
+    return '92874a';
+end
+
 function get_character_card_name_to_color_map()
     return {
         ["Vin Character Card"    ]  = "Red",
