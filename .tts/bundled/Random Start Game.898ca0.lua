@@ -116,58 +116,43 @@ function assign_characters_and_spawn_pieces(main_deck, mission_deck, character_d
         setup_health_dial_and_starter_deck(name, global_tags, health_trackers, starter_decks);
     end
 
-    -- Delay time to make sure all cards are settled
-    Wait.time(function() print("LLLLLLLLLET'S PLAY!") end, 5);
-
-    -- Lock all cards that should be locked for ease of play
-    for name,_ in pairs(assigned_characters) do
-        assigned_characters[name].setLock(true);
-        training_tracks[name]    .setLock(true);
-    end
-
-    for i=1,3 do
-        missions_array[i].setLock(true); -- Could just explicitly write [1], [2], [3] instead of loop
-    end
+    -- Wait for 1 second for cards to settle before locking them in place
+    Wait.time(function() lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array) end, 1);
 end
 
 function assign_and_set_character_cards(character_deck, players)
-    local assigned_character_cards     = {};
-    local character_card               = {};
-    -- TODO: have this match the snap point peice placement procedure you've been doing
-    local character_card_position_map  = {
-        ["Vin Character Card"    ]  = { 8.27, 2.5, -15.71},
-        ["Shan Character Card"   ]  = { 8.27, 2.5,  15.69},
-        ["Kelsier Character Card"]  = {-6.70, 2.5, -15.71},
-        ["Marsh Character Card"  ]  = {-6.75, 2.5,  15.69}
-    }
-    local character_card_rotation_map  = {
-        ["Vin Character Card"    ]  = {0, 180, 0},
-        ["Shan Character Card"   ]  = {0,   0, 0},
-        ["Kelsier Character Card"]  = {0, 180, 0},
-        ["Marsh Character Card"  ]  = {0,   0, 0}
-    }
-    local character_card_color_map  = {
-        ["Vin Character Card"    ]  = "Red",
-        ["Shan Character Card"   ]  = "Purple",
-        ["Kelsier Character Card"]  = "Blue",
-        ["Marsh Character Card"  ]  = "Yellow"
-    }
+    local assigned_character_cards      = {};
+    local character_card                = {};
+    local global_tags                   = Global.getSnapPoints();
+    local character_card_snap_points    = get_snap_points_with_tag(global_tags, "Character Card");
+    local character_card_point          = {};
+    local character_card_point_position = {};
+    local character_card_point_rotation = {};
+    local character_card_color_map      = get_character_card_name_to_color_map();
     local last_character_card = nil;
 
     for _, current_player in ipairs(players) do
+        -- Draw card from character card deck
         if last_character_card == nil then
             character_card      = character_deck.takeObject({position = {0, 0, 0}});
+            -- remainder only return a card if it'd be the last card in the deck
             last_character_card = character_deck.remainder;
         else
             character_card = last_character_card;
         end
-        local card_name = character_card.getName();
+        -- Get the character card and snap point data
+        local card_name      = character_card.getName();
+        local character_name = string.sub(card_name, 1, -16); -- Should remove the back 15 characters thus removing " Character Card"
+        character_card_point = get_snap_points_with_tag(character_card_snap_points, character_name)[1]; -- Indexing 1 because it should just be 1 point
+        character_card_point_position = character_card_point.position;
+        character_card_point_rotation = character_card_point.rotation;
 
+        -- Put the character card in game ready state
         character_card.flip();
-        character_card.setRotation(character_card_rotation_map[card_name]);
-        character_card.setPosition(character_card_position_map[card_name]);
-        -- character_card.setLock(true); TODO - Lock at the end
+        character_card.setPosition(character_card_point_position);
+        character_card.setRotation(character_card_point_rotation);
 
+        -- Put the player in the seat that corresponds with the character's color
         print(current_player)
         local character_color = character_card_color_map[card_name];
         print(character_color)
@@ -178,27 +163,35 @@ function assign_and_set_character_cards(character_deck, players)
             current_player.changeColor(character_color);
         end
         
-        local character_name = string.sub(card_name, 1, -16); -- Should remove the back 15 characters thus removing " Character Card"
         assigned_character_cards[character_name] = character_card;
     end
 
     return assigned_character_cards
 end
 
+function lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array) 
+    for name,_ in pairs(assigned_characters) do
+        assigned_characters[name].setLock(true);
+        training_tracks[name]    .setLock(true);
+    end
+
+    for i=1,3 do
+        missions_array[i].setLock(true); -- Could just explicitly write [1], [2], [3] instead of loop
+    end
+
+    print("LLLLLLLLLET'S PLAY!");
+end
+
 -- If you replace tags on snap points or remove and replace a snap point to move it, it will mess up the
 -- spawn of the mission cards because the mission_deck is sitting on a "mission_tracker" snap point
 function setup_mission_tracks(mission_deck, global_tags)
     local mission_snap_points = get_snap_points_with_tag(global_tags, "Mission Tracker");
-    log(mission_snap_points)
     local missions_array      = {};
     for i=1,3 do
-        log(i)
         mission_card = mission_deck.takeObject({position = {0, 0, 0}});
 
         mission_card.setPosition(mission_snap_points[i].position);
-        log(mission_snap_points[i].position)
         mission_card.setRotation(mission_snap_points[i].rotation);
-        log(mission_card)
 
         missions_array[i] = mission_card;
     end
@@ -357,6 +350,15 @@ function shuffle_deck(deck)
     deck.randomize();
 end
 -- ************************** DATA TABLES ************************* --
+function get_character_card_name_to_color_map()
+    return {
+        ["Vin Character Card"    ]  = "Red",
+        ["Shan Character Card"   ]  = "Purple",
+        ["Kelsier Character Card"]  = "Blue",
+        ["Marsh Character Card"  ]  = "Yellow"
+    }
+end
+
 function get_donor_metal_token_GUIDS()
     return {
         ["Pewter Token"]             = '314dea',
