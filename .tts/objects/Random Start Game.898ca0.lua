@@ -1,0 +1,411 @@
+function onLoad()
+    params = {
+        click_function = "click_func",
+        function_owner = self,
+        label          = "RAW Start",
+        position       = {0, 1, 0},
+        rotation       = {0, 180, 0},
+        width          = 1400,
+        height         = 500,
+        font_size      = 200,
+        color          = {1.0, 1.0, 1.0},
+        font_color     = {0, 0, 0},
+        press_color    = {0, 1, 0},
+        tooltip        = "Starts game with random characters and random missions",
+    }
+    self.createButton(params)
+end
+
+-- Use Alt-Click to just spawn decks all decks and pieces and let user choose
+-- how to setup the game.
+function click_func(obj, color, alt_click)
+    local main_deck, mission_deck, character_deck = spawn_decks();
+    assign_characters_and_spawn_pieces(main_deck, mission_deck, character_deck); 
+end
+
+function spawn_decks()
+    -- TODO - make sure you don't clone the main deck, character deck, and mission deck
+    local main_deck = create_and_spawn_main_deck();
+    local mission_deck, character_deck = spawn_mission_and_character_decks();
+    return main_deck, mission_deck, character_deck;
+end
+
+-- Small todo, make the initial spawning prettier? if based on the donor cards height
+-- then this will be handled automatically when I hide the donor decks
+function create_and_spawn_main_deck()
+    local donor_ally_deck_GUID =   'cbbbaa'; --This needs set manually everytime the deck is replaced
+    local donor_action_deck_GUID = 'bbdb7c'; --This needs set manually everytime the deck is replaced
+    --print("Set GUIDS");
+
+    local donor_ally_deck   = getObjectFromGUID(donor_ally_deck_GUID);
+    local donor_action_deck = getObjectFromGUID(donor_action_deck_GUID);
+    --print("getObjectFromGUID");
+    
+    local main_deck_spawn = {-2.54, 2.00, -0.05};
+    --local deck_2_spawn = {-2.54, 4.00, -0.05};
+    --print("Set Spawn Data");
+
+    local action_deck = donor_action_deck.clone();
+    action_deck.setLock(false);
+    local ally_deck   = donor_ally_deck  .clone();
+    ally_deck.setLock(false);
+    --print("Clone From Donors");
+
+    local main_deck   = action_deck.putObject(ally_deck);
+    --print("Create Main Deck");
+    main_deck.setPosition(main_deck_spawn);
+    --print("Set Main Deck Position");
+
+    shuffle_deck(main_deck);
+
+    return main_deck;
+end
+
+function spawn_mission_and_character_decks()
+    local donor_mission_deck_GUID   = '92874a'; -- 92874a This needs set manually everytime the deck is replaced 85c4d5 <- original mission deck guid
+    local donor_character_deck_GUID = 'de0a91'; --This needs set manually everytime the deck is replaced
+
+    local donor_mission_deck   = getObjectFromGUID(donor_mission_deck_GUID);
+    local donor_character_deck = getObjectFromGUID(donor_character_deck_GUID);
+    --print("getObjectFromGUID");
+    
+    local mission_deck_position   = {-15.26, 1.50,  0.01};
+    local character_deck_position = {-21.13, 1.50,  0.05};
+    
+    --print("Set Spawn Data");
+
+    local mission_deck   = donor_mission_deck  .clone();
+    mission_deck.setLock(false);
+    local character_deck = donor_character_deck.clone();
+    character_deck.setLock(false);
+    --print("Clone From Donors");
+
+    mission_deck  .setPosition(mission_deck_position  );
+    character_deck.setPosition(character_deck_position);
+    --print("Set Main Deck Position");
+
+    shuffle_deck(mission_deck);
+    shuffle_deck(character_deck);
+
+    return mission_deck, character_deck;
+end
+
+-- This most certainly is going to need the character deck and mission
+-- deck passed into it
+function assign_characters_and_spawn_pieces(main_deck, mission_deck, character_deck)
+    -- Consider renaming the character based keys as just the character name
+    -- so you can make a function that just loops through searching for names as keys
+    local donor_metal_tokens    = get_objects_from_guids_map(get_donor_metal_token_GUIDS()  );
+    local health_trackers       = get_objects_from_guids_map(get_health_tracker_GUIDS()     );
+    local starter_decks         = get_objects_from_guids_map(get_starter_deck_GUIDS()       );
+    local donor_markers         = get_objects_from_guids_map(get_donor_marker_GUIDS()       );
+    local donor_training_track  = getObjectFromGUID(         get_doner_training_track_GUID());
+    local global_tags           = Global.getSnapPoints();
+    local players               = Player.getPlayers();
+
+    -- Assign characters to players and put the players in the appropriate seat
+    local assigned_characters = assign_and_set_character_cards(character_deck, players);
+    local missions_array      = setup_mission_tracks(mission_deck, global_tags);
+
+    local training_tracks = {};
+
+    -- Loop through the assign characters and spawn all their pieces in the correct positions
+    for name,_ in pairs(assigned_characters) do
+        training_tracks[name] = setup_training_track(name, global_tags, donor_training_track, donor_metal_tokens, donor_markers[name]);
+        setup_mission_tracker_markers(name, missions_array, donor_markers);
+        setup_health_dial_and_starter_deck(name, global_tags, health_trackers, starter_decks);
+    end
+
+    -- Delay time to make sure all cards are settled
+    Wait.time(function() print("LLLLLLLLLET'S PLAY!") end, 5);
+
+    -- Lock all cards that should be locked for ease of play
+    for name,_ in pairs(assigned_characters) do
+        assigned_characters[name].setLock(true);
+        training_tracks[name]    .setLock(true);
+    end
+
+    for i=1,3 do
+        missions_array[i].setLock(true); -- Could just explicitly write [1], [2], [3] instead of loop
+    end
+end
+
+function assign_and_set_character_cards(character_deck, players)
+    local assigned_character_cards     = {};
+    local character_card               = {};
+    -- TODO: have this match the snap point peice placement procedure you've been doing
+    local character_card_position_map  = {
+        ["Vin Character Card"    ]  = { 8.27, 2.5, -15.71},
+        ["Shan Character Card"   ]  = { 8.27, 2.5,  15.69},
+        ["Kelsier Character Card"]  = {-6.70, 2.5, -15.71},
+        ["Marsh Character Card"  ]  = {-6.75, 2.5,  15.69}
+    }
+    local character_card_rotation_map  = {
+        ["Vin Character Card"    ]  = {0, 180, 0},
+        ["Shan Character Card"   ]  = {0,   0, 0},
+        ["Kelsier Character Card"]  = {0, 180, 0},
+        ["Marsh Character Card"  ]  = {0,   0, 0}
+    }
+    local character_card_color_map  = {
+        ["Vin Character Card"    ]  = "Red",
+        ["Shan Character Card"   ]  = "Purple",
+        ["Kelsier Character Card"]  = "Blue",
+        ["Marsh Character Card"  ]  = "Yellow"
+    }
+    local last_character_card = nil;
+
+    for _, current_player in ipairs(players) do
+        if last_character_card == nil then
+            character_card      = character_deck.takeObject({position = {0, 0, 0}});
+            last_character_card = character_deck.remainder;
+        else
+            character_card = last_character_card;
+        end
+        local card_name = character_card.getName();
+
+        character_card.flip();
+        character_card.setRotation(character_card_rotation_map[card_name]);
+        character_card.setPosition(character_card_position_map[card_name]);
+        -- character_card.setLock(true); TODO - Lock at the end
+
+        print(current_player)
+        local character_color = character_card_color_map[card_name];
+        print(character_color)
+        if Player[character_color].seated == false then
+            current_player.changeColor(character_color);
+        else
+            Player[character_color].changeColor("Grey");
+            current_player.changeColor(character_color);
+        end
+        
+        local character_name = string.sub(card_name, 1, -16); -- Should remove the back 15 characters thus removing " Character Card"
+        assigned_character_cards[character_name] = character_card;
+    end
+
+    return assigned_character_cards
+end
+
+-- If you replace tags on snap points or remove and replace a snap point to move it, it will mess up the
+-- spawn of the mission cards because the mission_deck is sitting on a "mission_tracker" snap point
+function setup_mission_tracks(mission_deck, global_tags)
+    local mission_snap_points = get_snap_points_with_tag(global_tags, "Mission Tracker");
+    log(mission_snap_points)
+    local missions_array      = {};
+    for i=1,3 do
+        log(i)
+        mission_card = mission_deck.takeObject({position = {0, 0, 0}});
+
+        mission_card.setPosition(mission_snap_points[i].position);
+        log(mission_snap_points[i].position)
+        mission_card.setRotation(mission_snap_points[i].rotation);
+        log(mission_card)
+
+        missions_array[i] = mission_card;
+    end
+
+    return missions_array;
+end
+
+function setup_training_track(character_name, global_tags, donor_training_track, donor_metal_tokens, donor_marker)
+    local character_snap_points   = get_snap_points_with_tag(global_tags, character_name);
+    local training_track_position = get_snap_points_with_tag(character_snap_points, "Training Track")[1].position; -- Should only be 1 snap point at this point
+    local training_track_rotation = get_snap_points_with_tag(character_snap_points, "Training Track")[1].rotation; -- Should only be 1 snap point at this point
+
+    local training_track = donor_training_track.clone();
+    training_track.setLock(false);
+    training_track.setPosition(training_track_position);
+    training_track.setRotation(training_track_rotation);
+
+    set_up_metal_tokens(character_name, training_track, donor_metal_tokens);
+    set_up_marker(character_name, training_track, donor_marker);
+    
+    return training_track;
+end
+
+function set_up_metal_tokens(character_name, training_track, donor_metal_tokens)
+    local training_track_snap_points = training_track.getSnapPoints();
+    local metal_token                = {};
+    local metal_token_point          = {};
+
+    for metal, token in pairs(donor_metal_tokens) do
+        metal_token_point    = get_snap_points_with_tag(training_track_snap_points, metal)[1]; -- Indexing here because it should just be one point
+        metal_token          = token.clone();
+        metal_token.setLock(false);
+        -- positionToWorld is important bc the snap point position is relative to the tracker, 
+        -- vector(0,1,0) is to prevent spawn collision with tracker board
+        metal_token.setPosition(training_track.positionToWorld(metal_token_point.position) + vector(0,1,0));
+        -- If you don't have an if statement for a side of the board as below, 2 people will end
+        -- up with upside down metal tokens
+        if character_name == "Marsh" or character_name == "Shan" then
+            metal_token.setRotation(metal_token_point.rotation);
+        end
+    end
+end
+
+function set_up_marker(character_name, training_track, donor_marker)
+    local training_track_snap_points = training_track.getSnapPoints();
+    local first_marker_snap_point = get_snap_points_with_tag(training_track_snap_points, "Marker")[1]; -- pre-index for the first marker position
+    local marker                  = donor_marker.clone();
+    marker.setLock(false);
+    -- positionToWorld is important bc the snap point position is relative to the tracker, 
+    -- vector(0,1,0) is to prevent spawn collision with tracker board
+    marker.setPosition(training_track.positionToWorld(first_marker_snap_point.position) + vector(0,1,0));
+    -- Unimportant if that would prevent the marker from spinning when lifted for these 2 characters
+    if character_name == "Kelsier" or character_name == "Vin" then
+        marker.setRotation(first_marker_snap_point.rotation + vector(0,180,0));
+    else
+        marker.setRotation(first_marker_snap_point.rotation);
+    end
+end
+
+function setup_mission_tracker_markers(character_name, missions_array, donor_markers)
+    local mission_card              = {};
+    local mission_track_snap_points = {};
+    local starting_positions        = {};
+    local character_starting_point  = {};
+    local position_on_card          = {};
+    local rotation                  = {};
+    local marker_name               = get_character_marker_name_map()[character_name];
+    local markers                   = {
+        donor_markers[character_name].clone(),
+        donor_markers[character_name].clone(),
+        donor_markers[character_name].clone()
+    };
+
+
+    for i=1,#missions_array do
+        mission_card                     = missions_array[i];
+        mission_track_snap_points        = mission_card.getSnapPoints();
+        starting_positions               = get_snap_points_with_tag(mission_track_snap_points, "Starting Position");
+        character_marker_starting_point  = get_snap_points_with_tag(starting_positions, marker_name)[1]; -- Should just be 1 point that has "Starting Position" and target character name
+        position_on_card                 = mission_card.positionToWorld(character_marker_starting_point.position);
+        rotation                         = character_marker_starting_point.rotation
+        
+        markers[i].setLock(false);
+        markers[i].setPosition(position_on_card + vector(0,1,0)); -- +1 in y to avoid spawn collision
+        markers[i].setRotation(rotation + vector(0,90,0));        -- +90 degrees because it "needed" it
+    end
+end
+
+function setup_health_dial_and_starter_deck(character_name, global_tags, health_trackers, starter_decks)
+    local health_tracker = health_trackers[character_name];
+    local starter_deck   = starter_decks[character_name];
+
+    local health_tracker_snap_points     = get_snap_points_with_tag(global_tags, "Health Tracker");
+    local character_health_tracker_point = get_snap_points_with_tag(health_tracker_snap_points, character_name)[1]; -- Index 1 because it should be an array with one item
+
+    local starter_deck_snap_points     = get_snap_points_with_tag(global_tags, "Starter Deck");
+    local character_starter_deck_point = get_snap_points_with_tag(starter_deck_snap_points, character_name)[1];   -- Index 1 because it should be an array with one item
+
+    health_tracker.setLock(false);
+    health_tracker.setPosition(character_health_tracker_point.position + vector(0, 3, 0)); -- 3 in y because it needs to be on player character card
+    health_tracker.setRotation(character_health_tracker_point.rotation);
+
+    starter_deck.setLock(false);
+    starter_deck.setPosition(character_starter_deck_point.position + vector(0, 1, 0));
+    starter_deck.setRotation(character_starter_deck_point.rotation);
+
+    shuffle_deck(starter_deck);
+end
+
+----------------------- REUSABLE HELPER FUNCTIONS -----------------------
+function TableConcat(t1,t2)
+    for i=1,#t2 do
+        t1[#t1+i] = t2[i]
+    end
+    return t1
+end
+
+function get_snap_points_with_tag(snap_points, target_tag)
+    -- Add all snap points that have the target tag into target_snaps table
+    local target_snaps = {};
+    for i=1,#snap_points do
+        local curr_snap = snap_points[i];
+        if search_for_tag(curr_snap.tags, target_tag) then
+            target_snaps[#target_snaps + 1] = curr_snap;
+        end
+    end
+
+    return target_snaps;
+end
+
+function search_for_tag(tags, target_tag)
+    for i=1,#tags do
+        local curr_tag = tags[i];
+        if curr_tag == target_tag then
+            return true;
+        end
+    end
+
+    return false;
+end
+
+function get_objects_from_guids_map(guids_map)
+    for key, value in pairs(guids_map) do
+        guids_map[key] = getObjectFromGUID(value);
+    end
+
+    return guids_map; -- This is actually a map of name to object, not guid
+end
+
+function shuffle_deck(deck)
+    deck.randomize();
+    deck.randomize();
+    deck.randomize();
+    deck.randomize();
+    deck.randomize();
+    deck.randomize();
+end
+-- ************************** DATA TABLES ************************* --
+function get_donor_metal_token_GUIDS()
+    return {
+        ["Pewter Token"]             = '314dea',
+        ["Tin Token"   ]             = '66d0e9',
+        ["Bronze Token"]             = '487fec',
+        ["Copper Token"]             = 'd47f53',
+        ["Zinc Token"  ]             = 'b9061b',
+        ["Brass Token" ]             = '35a8cb',
+        ["Iron Token"  ]             = 'db01d0',
+        ["Steel Token" ]             = '4b8cbb'
+    }
+end
+
+function get_health_tracker_GUIDS()
+    return {
+        ["Vin"     --[[Health Tracker]]]   = 'c7bb7b',
+        ["Shan"    --[[Health Tracker]]]   = '1bacbb',
+        ["Kelsier" --[[Health Tracker]]]   = '437522',
+        ["Marsh"   --[[Health Tracker]]]   = '52e800'
+    }
+end
+
+function get_starter_deck_GUIDS()
+    return {
+        ["Vin"     --[[Starter Deck]]]     = '013560',
+        ["Shan"    --[[Starter Deck]]]     = '4fda84',
+        ["Kelsier" --[[Starter Deck]]]     = '20bf13',
+        ["Marsh"   --[[Starter Deck]]]     = 'f3b1a6'
+    }
+end
+
+function get_donor_marker_GUIDS()
+    return {
+        ["Vin"     --[[Marker]]]           = 'a6c65d',
+        ["Shan"    --[[Marker]]]           = '541161',
+        ["Kelsier" --[[Marker]]]           = '586779',
+        ["Marsh"   --[[Marker]]]           = '8e6354'
+    }
+end
+
+function get_doner_training_track_GUID()
+    return 'a5ebe7';
+end
+
+function get_character_marker_name_map()
+    return {
+        ["Vin"    ]           = "Red Marker",
+        ["Shan"   ]           = "Purple Marker",
+        ["Kelsier"]           = "Blue Marker",
+        ["Marsh"  ]           = "Yellow Marker"
+    }
+end

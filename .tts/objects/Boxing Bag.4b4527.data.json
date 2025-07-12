@@ -1,0 +1,165 @@
+{
+  "GUID": "4b4527",
+  "Name": "Infinite_Bag",
+  "Transform": {
+    "posX": 22.7920418,
+    "posY": 0.942999959,
+    "posZ": 7.80114746,
+    "rotX": 1.56037729e-7,
+    "rotY": 300.0156,
+    "rotZ": 9.25527161e-7,
+    "scaleX": 1,
+    "scaleY": 1,
+    "scaleZ": 1
+  },
+  "Nickname": "Boxing Bag",
+  "Description": "",
+  "GMNotes": "",
+  "AltLookAngle": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "ColorDiffuse": {
+    "r": 1,
+    "g": 0.8587356,
+    "b": 0
+  },
+  "LayoutGroupSortIndex": 0,
+  "Value": 0,
+  "Locked": true,
+  "Grid": true,
+  "Snap": true,
+  "IgnoreFoW": false,
+  "MeasureMovement": false,
+  "DragSelectable": true,
+  "Autoraise": true,
+  "Sticky": true,
+  "Tooltip": true,
+  "GridProjection": false,
+  "HideWhenFaceDown": false,
+  "Hands": false,
+  "MaterialIndex": -1,
+  "MeshIndex": -1,
+  "LuaScript": "function onObjectLeaveContainer(container, object)\r\n    -- When the boxing leaves this container (infinite bag), I want to scale it\r\n    -- in half in the y direction so its more flat like a coin. Also doing this\r\n    -- because scaling it in the y with the gizmo won't persist across reload\r\n    -- or save in Save Object.\r\n    if container.getName() == \"Boxing Bag\" then\r\n        object.scale({x=1, y=1/2, z=1})\r\n    end\r\nend",
+  "LuaScriptState": "",
+  "XmlUI": "",
+  "ContainedObjects": [
+    {
+      "GUID": "667bca",
+      "Name": "Custom_Token",
+      "Transform": {
+        "posX": 0.34735626,
+        "posY": 3.05898762,
+        "posZ": 1.16166508,
+        "rotX": 358.4899,
+        "rotY": 179.99704,
+        "rotZ": 180.1759,
+        "scaleX": 0.399455726,
+        "scaleY": 1,
+        "scaleZ": 0.399455726
+      },
+      "Nickname": "",
+      "Description": "",
+      "GMNotes": "",
+      "AltLookAngle": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "ColorDiffuse": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "LayoutGroupSortIndex": 0,
+      "Value": 0,
+      "Locked": false,
+      "Grid": true,
+      "Snap": true,
+      "IgnoreFoW": false,
+      "MeasureMovement": false,
+      "DragSelectable": true,
+      "Autoraise": true,
+      "Sticky": true,
+      "Tooltip": true,
+      "GridProjection": false,
+      "HideWhenFaceDown": false,
+      "Hands": false,
+      "CustomImage": {
+        "ImageURL": "https://steamusercontent-a.akamaihd.net/ugc/11267306706134366060/CC4E5AE2F21EA43818CA1872B6124F7768DF262B/",
+        "ImageSecondaryURL": "",
+        "ImageScalar": 1,
+        "WidthScale": 0,
+        "CustomToken": {
+          "Thickness": 0.1,
+          "MergeDistancePixels": 5,
+          "StandUp": false,
+          "Stackable": true
+        }
+      },
+      "LuaScript": "",
+      "LuaScriptState": "",
+      "XmlUI": "",
+      "ChildObjects": [
+        {
+          "GUID": "211911",
+          "Name": "Custom_Token",
+          "Transform": {
+            "posX": -1.02891473e-8,
+            "posY": -0.09999955,
+            "posZ": -2.67027715e-8,
+            "rotX": 0.0000149071784,
+            "rotY": -0.000112698108,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "Nickname": "",
+          "Description": "",
+          "GMNotes": "",
+          "AltLookAngle": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "ColorDiffuse": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "LayoutGroupSortIndex": 0,
+          "Value": 0,
+          "Locked": false,
+          "Grid": true,
+          "Snap": true,
+          "IgnoreFoW": false,
+          "MeasureMovement": false,
+          "DragSelectable": true,
+          "Autoraise": true,
+          "Sticky": true,
+          "Tooltip": true,
+          "GridProjection": false,
+          "HideWhenFaceDown": false,
+          "Hands": false,
+          "CustomImage": {
+            "ImageURL": "https://steamusercontent-a.akamaihd.net/ugc/15597434813508108867/EAE600E3109187A4FAAF0E77047B1658125DD2A5/",
+            "ImageSecondaryURL": "",
+            "ImageScalar": 1,
+            "WidthScale": 0,
+            "CustomToken": {
+              "Thickness": 0.1,
+              "MergeDistancePixels": 5,
+              "StandUp": false,
+              "Stackable": true
+            }
+          },
+          "LuaScript": "",
+          "LuaScriptState": "",
+          "XmlUI": ""
+        }
+      ]
+    }
+  ]
+}
