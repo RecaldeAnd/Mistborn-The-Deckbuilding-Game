@@ -1,4 +1,4 @@
--- Universal Counter Tokens      original coded by: MrStump
+-- Universal Counter Tokens      starter code by: MrStump
 -- Scale and position adapted by kensuaga
 
 --Center positions for the buttons
@@ -76,12 +76,21 @@ function get_digits_from_count()
     return first_digit, second_digit;
 end
 
+-- This actually is not set to execute since the button associated with 
+-- this has a width and height of 0
 function customSet()
-    local description = self.getDescription();
+    local description   = self.getDescription();
+    local health_number = string.sub(description, 8);
     if description != '' and type(tonumber(description)) == 'number' then
-        self.setDescription('');
         count = tonumber(description);
         updateDisplay();
+        return;
+    end
+
+    if health_number != '' and type(tonumber(health_number)) == 'number' then
+        count = tonumber(health_number);
+        updateDisplay();
+        return;
     end
 end
 
@@ -103,6 +112,8 @@ function updateDisplay()
     b_display_digit_2.label = tostring(digit_2);
     self.editButton(b_display_digit_1);
     self.editButton(b_display_digit_2);
+    -- useful if customSet function comes into use
+    -- self.setDescription("Health: " .. tostring(count));
 end
 
 
