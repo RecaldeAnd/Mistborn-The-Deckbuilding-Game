@@ -30,31 +30,21 @@ function spawn_decks(is_custom_start)
     return main_deck, mission_deck, character_deck;
 end
 
--- Small todo, make the initial spawning prettier? if based on the donor cards height
--- then this will be handled automatically when I hide the donor decks
 function create_and_spawn_main_deck()
-    local donor_ally_deck_GUID =   'cbbbaa'; --This needs set manually everytime the deck is replaced
-    local donor_action_deck_GUID = 'bbdb7c'; --This needs set manually everytime the deck is replaced
-    --print("Set GUIDS");
-
-    local donor_ally_deck   = getObjectFromGUID(donor_ally_deck_GUID);
-    local donor_action_deck = getObjectFromGUID(donor_action_deck_GUID);
-    --print("getObjectFromGUID");
+    local ally_deck   = getObjectFromGUID(get_ally_deck_GUID()  );
+    local action_deck = getObjectFromGUID(get_action_deck_GUID());
+    local global_tags = Global.getSnapPoints();
     
-    local main_deck_spawn = {-2.54, 2.00, -0.05};
-    --local deck_2_spawn = {-2.54, 4.00, -0.05};
-    --print("Set Spawn Data");
+    local main_deck_snap_point = get_snap_points_with_tag(global_tags, "Main Deck")[1]; -- Should just be an array with 1 object
+    local main_deck_position   = main_deck_snap_point.position;
+    local main_deck_rotation   = main_deck_snap_point.rotation;
 
-    local action_deck = donor_action_deck.clone();
     action_deck.setLock(false);
-    local ally_deck   = donor_ally_deck  .clone();
     ally_deck.setLock(false);
-    --print("Clone From Donors");
 
     local main_deck   = action_deck.putObject(ally_deck);
-    --print("Create Main Deck");
-    main_deck.setPosition(main_deck_spawn);
-    --print("Set Main Deck Position");
+    main_deck.setPosition(main_deck_position + vector(0, 1, 0)); -- +1 in y to avoid table clipping
+    main_deck.setRotation(main_deck_rotation);
 
     shuffle_deck(main_deck);
 
@@ -345,6 +335,13 @@ function shuffle_deck(deck)
 end
 -- ************************** DATA TABLES ************************* --
 -- These need set manually everytime the deck or object is replaced
+function get_action_deck_GUID()
+    return 'bbdb7c';
+end
+
+function get_ally_deck_GUID()
+    return 'cbbbaa';
+end
 
 function get_character_deck_GUID()
     return 'de0a91';
