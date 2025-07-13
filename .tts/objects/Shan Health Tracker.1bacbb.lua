@@ -1,5 +1,6 @@
 -- Universal Counter Tokens      starter code by: MrStump
 -- Scale and position adapted by kensuaga
+-- Scale, position, and display altered by RecaldeAnd
 
 --Center positions for the buttons
     posX = -0.02;
