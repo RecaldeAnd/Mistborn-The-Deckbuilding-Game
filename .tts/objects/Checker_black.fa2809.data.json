@@ -1,0 +1,46 @@
+{
+  "GUID": "fa2809",
+  "Name": "Checker_black",
+  "Transform": {
+    "posX": -4.37988949,
+    "posY": 0.8,
+    "posZ": 3.65927529,
+    "rotX": 0.000004331027,
+    "rotY": 269.942261,
+    "rotZ": 180,
+    "scaleX": 0.725000262,
+    "scaleY": 0.725000262,
+    "scaleZ": 0.725000262
+  },
+  "Nickname": "",
+  "Description": "Right Mission Down",
+  "GMNotes": "1f8a7a",
+  "AltLookAngle": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "ColorDiffuse": {
+    "r": 0,
+    "g": 0,
+    "b": 0,
+    "a": 0
+  },
+  "LayoutGroupSortIndex": 0,
+  "Value": 0,
+  "Locked": true,
+  "Grid": true,
+  "Snap": true,
+  "IgnoreFoW": false,
+  "MeasureMovement": false,
+  "DragSelectable": true,
+  "Autoraise": true,
+  "Sticky": true,
+  "Tooltip": true,
+  "GridProjection": false,
+  "HideWhenFaceDown": false,
+  "Hands": false,
+  "LuaScript": "function onLoad()\r\n    params = {\r\n        click_function = \"click_func\",\r\n        function_owner = self,\r\n        label          = \"⇓\",\r\n        position       = {0, 0, 0},\r\n        rotation       = {0, 180, 0},\r\n        width          = 130,\r\n        height         = 250,\r\n        scale          = {2, 2, 2},\r\n        font_size      = 200,\r\n        color          = {1.0, 1.0, 1.0},\r\n        font_color     = {0, 0, 0},\r\n        press_color    = {0, 1, 0},\r\n        tooltip        = \"-1\",\r\n    }\r\n    self.createButton(params)\r\nend\r\n\r\nfunction click_func(obj, color, alt_click) \r\n    local scripting_zone           = getObjectFromGUID('1f8a7a');\r\n    local zone_objects             = scripting_zone.getObjects();\r\n    local color_to_marker_name_map = get_color_to_marker_name_map();\r\n    -- TODO: \r\n    -- NICE TO HAVE, set up a permanent variable that is reset on turns that makes a ghost of the\r\n    -- marker for where it started that turn... likely will be tied to turn script and not this one\r\n    local mission_card             = {};\r\n    local player_marker            = {};\r\n\r\n    -- Get the marker for the player that clicked the button\r\n    for _,value in pairs(zone_objects) do\r\n        if value.getName() == color_to_marker_name_map[color] then\r\n            player_marker = value;\r\n            break;\r\n        end\r\n    end\r\n\r\n    mission_card = player_marker.getVar(\"mission_card\");\r\n\r\n    -- Get the mission card's snap points and next position the marker needs to go\r\n    local mission_card_snap_points     = mission_card.getTable(player_marker.getName());\r\n    local player_marker_track_position = player_marker.getVar(\"track_position\");\r\n    local next_track_pos               = player_marker_track_position - 1;\r\n\r\n    if next_track_pos <= 0 then\r\n        return;\r\n    end\r\n    \r\n    if next_track_pos == #mission_card_snap_points then\r\n        local victory_row_occupied_positions = mission_card.getTable(\"victory_row_occupied_pos\");\r\n        \r\n        -- Update Data\r\n        for i=1,4 do \r\n            if victory_row_occupied_positions[i].getName() == player_marker.getName() then\r\n                victory_row_occupied_positions[i] = nil;\r\n                mission_card.setTable(\"victory_row_occupied_pos\", victory_row_occupied_positions);\r\n                break;\r\n            end\r\n        end\r\n    end\r\n\r\n    local next_local_pos            = mission_card_snap_points[next_track_pos].position;\r\n    local next_world_pos            = mission_card.positionToWorld(next_local_pos);\r\n    -- Ensure the block is always touching the top surface of the mission card\r\n    local next_world_pos_adjusted_y = {next_world_pos.x, player_marker.getPosition().y, next_world_pos.z}\r\n\r\n    player_marker.setPositionSmooth(next_world_pos_adjusted_y);\r\n    player_marker.setVar(\"track_position\", next_track_pos);\r\nend\r\n\r\nfunction get_color_to_marker_name_map()\r\n    return {\r\n        [\"Red\"   ]           = \"Vin Marker\",\r\n        [\"Purple\"]           = \"Shan Marker\",\r\n        [\"Blue\"  ]           = \"Kelsier Marker\",\r\n        [\"Yellow\"]           = \"Marsh Marker\"\r\n    };\r\nend",
+  "LuaScriptState": "",
+  "XmlUI": ""
+}

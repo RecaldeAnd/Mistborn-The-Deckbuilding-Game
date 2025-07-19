@@ -43,6 +43,8 @@ function create_and_spawn_main_deck()
     ally_deck.setLock(false);
 
     local main_deck   = action_deck.putObject(ally_deck);
+    main_deck.setName("Main Deck");
+    main_deck.removeTag("Action");
     main_deck.setPosition(main_deck_position + vector(0, 1, 0)); -- +1 in y to avoid table clipping
     main_deck.setRotation(main_deck_rotation);
 
@@ -98,9 +100,11 @@ function assign_characters_and_spawn_pieces(main_deck, mission_deck, character_d
         setup_health_dial_and_starter_deck(name, global_tags, health_trackers, starter_decks);
     end
 
+    local mission_track_buttons = expose_mission_buttons();
+
     -- Wait for 1 second for cards to settle before locking them in place
     -- Comment this out to see if its necessary with new deck acquiring algo
-    Wait.time(function() lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array) end, 1);
+    Wait.time(function() lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array, mission_track_buttons) end, 1);
 end
 
 function assign_and_set_character_cards(character_deck, players)
@@ -153,7 +157,7 @@ function assign_and_set_character_cards(character_deck, players)
     return assigned_character_cards
 end
 
-function lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array) 
+function lock_pieces_that_should_not_move(assigned_characters, training_tracks, missions_array, mission_track_buttons) 
     for name,_ in pairs(assigned_characters) do
         assigned_characters[name].setLock(true);
         training_tracks[name]    .setLock(true);
@@ -161,6 +165,10 @@ function lock_pieces_that_should_not_move(assigned_characters, training_tracks, 
 
     for i=1,3 do
         missions_array[i].setLock(true); -- Could just explicitly write [1], [2], [3] instead of loop
+    end
+
+    for _,button in pairs(mission_track_buttons) do
+        button.setLock(true);
     end
 
     print("LLLLLLLLLET'S PLAY!");
@@ -253,14 +261,16 @@ function setup_mission_tracker_markers(character_name, missions_array, donor_mar
     for i=1,#missions_array do
         mission_card                     = missions_array[i];
         mission_track_snap_points        = mission_card.getSnapPoints();
-        starting_positions               = get_snap_points_with_tag(mission_track_snap_points, "Starting Position");
-        character_marker_starting_point  = get_snap_points_with_tag(starting_positions, marker_name)[1]; -- Should just be 1 point that has "Starting Position" and target character name
+        character_marker_snap_points     = get_snap_points_with_tag(mission_track_snap_points, marker_name);
+        character_marker_starting_point  = get_snap_points_with_tag(character_marker_snap_points, "Starting Position")[1]; -- Should just be 1 point that has "Starting Position" and target character name
         position_on_card                 = mission_card.positionToWorld(character_marker_starting_point.position);
         rotation                         = character_marker_starting_point.rotation
         
         markers[i].setLock(false);
         markers[i].setPosition(position_on_card + vector(0,1,0)); -- +1 in y to avoid spawn collision
         markers[i].setRotation(rotation + vector(0,90,0));        -- +90 degrees because it "needed" it
+
+        organize_mission_card_snap_points(mission_card, character_marker_snap_points, markers[i]);
     end
 end
 
@@ -285,6 +295,49 @@ function setup_health_dial_and_starter_deck(character_name, global_tags, health_
     shuffle_deck(starter_deck);
 end
 
+-- THE FOLLOWING ASSUMES THE SNAP POINTS ARE IN ORDER, if not, uncomment sorting code
+function organize_mission_card_snap_points(mission_card, snap_points_for_character, marker)
+    marker.setVar("track_position", 1);
+    local all_mission_track_snap_points = mission_card.getSnapPoints();
+    -- We can get index 1 of the four points below because there should only
+    -- be one of each
+    -- TODO: When importing the newly scanned assets for the mission cards, give
+    -- the victory row the "victory row" tag and just get and store that array here
+    local victory_row_first             = get_snap_points_with_tag(all_mission_track_snap_points, "First Place")[1];
+    local victory_row_second            = get_snap_points_with_tag(all_mission_track_snap_points, "Second Place")[1];
+    local victory_row_third             = get_snap_points_with_tag(all_mission_track_snap_points, "Third Place")[1];
+    local victory_row_fourth            = get_snap_points_with_tag(all_mission_track_snap_points, "Fourth Place")[1];
+    -- assuming the Starting Position is index 1 as logging has shown
+    -- local starting_position = table.remove(snap_points_for_character, 1);
+
+    --[[
+    table.sort(snap_points_for_character, function(left, right)
+        return left.position.z > right.position.z;
+    end);
+    ]]
+    -- There are 13 snap points per marker, 1 starting position specific to the marker,
+    -- 4 different end points that can each hold 1 marker (12th row), and the 11 rows between.
+    -- Store the starting position in the empty 12th slot
+    --snap_points_for_character[12] = starting_position;
+
+    mission_card.setTable(marker.getName(), snap_points_for_character);
+    mission_card.setTable("victory_row_snap_points", {victory_row_first, victory_row_second, victory_row_third, victory_row_fourth});
+    mission_card.setTable("victory_row_occupied_pos", {nil, nil, nil, nil});
+    marker      .setVar("mission_card", mission_card);
+end
+
+function expose_mission_buttons()
+    local mission_track_buttons = get_objects_from_guids_map(get_mission_button_GUIDS());
+
+    -- This should go through all the mission buttons, release them from the table
+    -- and make the button clickable
+    for _,button in pairs(mission_track_buttons) do
+        button.setLock(false);
+        button.flip();
+    end
+
+    return mission_track_buttons;
+end
 ----------------------- REUSABLE HELPER FUNCTIONS -----------------------
 function TableConcat(t1,t2)
     for i=1,#t2 do
@@ -336,11 +389,11 @@ end
 -- ************************** DATA TABLES ************************* --
 -- These need set manually everytime the deck or object is replaced
 function get_action_deck_GUID()
-    return 'bbdb7c';
+    return '6c8baf'; -- eaa3a6 'bbdb7c';
 end
 
 function get_ally_deck_GUID()
-    return 'cbbbaa';
+    return 'f97506'; -- b6d519 'cbbbaa';
 end
 
 function get_character_deck_GUID()
@@ -384,10 +437,10 @@ end
 
 function get_starter_deck_GUIDS()
     return {
-        ["Vin"     --[[Starter Deck]]]     = '013560',
-        ["Shan"    --[[Starter Deck]]]     = '4fda84',
-        ["Kelsier" --[[Starter Deck]]]     = '20bf13',
-        ["Marsh"   --[[Starter Deck]]]     = 'f3b1a6'
+        ["Vin"     --[[Starter Deck]]]     = 'aa8271', --'2dfb86', --'013560',
+        ["Shan"    --[[Starter Deck]]]     = '54205c', --'02a1d6', --'4fda84',
+        ["Kelsier" --[[Starter Deck]]]     = '93a859', --'286310', --'20bf13',
+        ["Marsh"   --[[Starter Deck]]]     = '450e48', --'071e2a', --'f3b1a6'
     }
 end
 
@@ -410,5 +463,16 @@ function get_character_marker_name_map()
         ["Shan"   ]           = "Purple Marker",
         ["Kelsier"]           = "Blue Marker",
         ["Marsh"  ]           = "Yellow Marker"
+    }
+end
+
+function get_mission_button_GUIDS()
+    return {
+        ["Left Mission Up"    ] = 'aeb75d',
+        ["Left Mission Down"  ] = '67a699',
+        ["Middle Mission Up"  ] = 'ec48d9',
+        ["Middle Mission Down"] = 'a337b6',
+        ["Right Mission Up"   ] = 'e636ad',
+        ["Right Mission Down" ] = 'fa2809',
     }
 end
